@@ -1,45 +1,45 @@
 # LearnExa Claude Handoff
 
 ## Current Phase
-Phase 8 of 15 — Complete RAG
+Phase 9 of 15 — FastAPI Integration
 
 ## Last Completed Step
-8.1 — pipeline.py and try_pipeline.py written (not yet run by the user)
+9.1 — models/schemas.py written (awaiting the user's test result)
 
 ## Last Completed File
-backend/app/rag/pipeline.py
+backend/app/models/schemas.py
 
 ## Current Working Feature
-ingest_document(path, document_id, name) and ask(question, document_id=None)
-returning Answer(answer, sources). Empty retrieval returns a fixed message
-without calling Gemini.
+Phase 8 pipeline is committed and working: ingest_document(), ask().
+Schemas: DocumentResponse, ChatRequest, SourceResponse, ChatResponse, ErrorResponse.
 
 ## Next File
-backend/app/api/documents.py (Phase 9), once the user confirms the test results
+backend/app/services/document_service.py
 
 ## Next Exact Task
-Confirm pipeline test output with the user. Then Phase 9: schemas
-(models/schemas.py), document_service.py (uuid ids, saving uploads, listing,
-deleting), then POST /api/documents/upload, GET /api/documents,
-DELETE /api/documents/{id}, POST /api/chat. Map the rag error classes to HTTP
-status codes. One file at a time.
+Decide where document metadata (pages, chunks, upload time) is stored since
+Chroma lacks pages/upload time (simple option: small JSON registry in
+backend/data). Then write document_service.py (uuid ids, saving uploads,
+validation, list, delete), then api/documents.py, then api/chat.py, then
+register routers in main.py. One file at a time.
 
 ## Working Commands
 cd backend ; .venv\Scripts\activate.bat
 python try_pipeline.py ingest data\uploads\sample.txt
-python try_pipeline.py ask "your question about sample.txt" sample
-python try_pipeline.py ask "anything" does_not_exist
+python try_pipeline.py ask "question" sample
 
 ## Important Decisions
-- One step at a time, complete files, WHAT/WHY/HOW/INTERVIEW
-- No overengineering; Gemini key only in backend/.env, never in chat, zips or Git
+- One step at a time, WHAT/WHY/HOW/INTERVIEW, CURRENT PROGRESS footer
+- GIVE CODE DIRECTLY IN CHAT as code blocks (the user does not want file cards)
+- Always provide complete files; no overengineering
+- Gemini key only in backend/.env, never in chat, zips or Git
 - User is a beginner on Windows, VS Code, cmd (activate.bat); go slowly
-- Project root C:\LearnExa; test PDF backend/data/uploads/notes.pdf
-- Free-tier limits matter: embeddings 100 texts/min, low generation limits
-- Prefer sample.txt for quick pipeline tests (notes.pdf takes minutes to embed)
+- Project root C:\LearnExa; test files backend/data/uploads/notes.pdf, sample.txt
+- Free-tier limits matter
 
 ## Known Problems
-Footer-only chunks; retrieval returns nearest chunks even if unrelated.
+Footer-only chunks; retrieval returns nearest chunks even if unrelated;
+Gemini 503 spikes (wait, retry, or change GEMINI_MODEL).
 
 ## Do Not Change
 - Folder structure in the master prompt
