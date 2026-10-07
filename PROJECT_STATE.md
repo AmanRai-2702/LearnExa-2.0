@@ -6,7 +6,8 @@ Rebuild LearnExa as a clean, explainable full-stack RAG learning assistant
 component in an interview.
 
 ## Current Phase
-Phase 9 — FastAPI Integration (step 1: schemas)
+Phase 12 — Testing (12.1 health tests done and committed; 12.2 chunking tests
+written, awaiting the user's pytest run)
 
 ## Completed Phases
 - Phase 1 — Project Setup
@@ -16,71 +17,135 @@ Phase 9 — FastAPI Integration (step 1: schemas)
 - Phase 5 — Chroma (149 chunks stored)
 - Phase 6 — Retrieval
 - Phase 7 — Gemini Generation
-- Phase 8 — Complete RAG (pipeline.py; committed)
+- Phase 8 — Complete RAG (pipeline.py)
+- Phase 9 — FastAPI Integration (documents + chat endpoints)
+- Phase 10 — Next.js Frontend (all pages)
+- Phase 11 — UI Polish (markdown rendering, titles, safe links, mobile navbar;
+  commit 7699122 confirmed in git log)
 
 ## Completed Files
 - .gitignore, backend/requirements.txt, backend/.env.example
-- backend/app/core/config.py, api/health.py, main.py
+- backend/pytest.ini
+- backend/tests/test_health.py (6 tests, committed in 17fd68b)
+- backend/tests/test_chunking.py (18 tests, written, not yet run by the user)
+- backend/app/core/config.py, main.py
+- backend/app/api/: health.py, documents.py, chat.py
 - backend/app/rag/: loader.py, splitter.py, embeddings.py, vector_store.py,
   retriever.py, prompts.py, generator.py, pipeline.py
-- backend/app/models/schemas.py (new, testing)
-- backend/try_*.py helpers (loader, splitter, embeddings, chroma, retriever,
-  models, generate, pipeline) — temporary, delete later
-- frontend/ (Next.js 16), lib/api.ts, app/page.tsx (health status)
+- backend/app/models/schemas.py
+- backend/app/services/document_service.py
+- backend/try_*.py helpers (temporary, delete later)
+- frontend/lib/types.ts, frontend/lib/api.ts
+- frontend/app/layout.tsx, app/globals.css, components/layout/Navbar.tsx
+- frontend/app/page.tsx (Dashboard)
+- frontend/app/documents/page.tsx + layout.tsx; frontend/app/chat/page.tsx + layout.tsx
+- frontend/components/documents/: DocumentCard, DocumentList, UploadZone
+- frontend/components/chat/: SourceCard, ChatMessage, ChatInput, ChatWindow
 
 ## Current File
-backend/app/models/schemas.py
+backend/tests/test_chunking.py
 
 ## Next File
-backend/app/services/document_service.py
+backend/tests/test_loader.py
 
 ## Working Features
-- /health, frontend health page
-- ingest_document(path, document_id, name) and ask(question, document_id)
-- Gemini generation with 5 retries on 429/503, AFC disabled
+- All backend endpoints: /health, /api/documents (upload/list/delete), /api/chat
+- Frontend: Dashboard, Documents (list/delete/upload), Chat (markdown answers,
+  sources, selector, errors), per-page titles, system-theme dark mode
+- pytest: 6 health/CORS tests collected; expected total after 12.2 is 24 passed
 
 ## Commands Used
 - cd backend ; .venv\Scripts\activate.bat ; uvicorn app.main:app --reload
-- cd frontend ; npm run dev
+- cd backend ; .venv\Scripts\activate.bat ; pytest -v
+- pytest tests\test_chunking.py -v   (one file only)
+- Swagger UI: http://localhost:8000/docs
+- cd frontend ; npm run dev ; npx tsc --noEmit ; npm run lint ; npm run build
+  (stop the dev server before building)
 - python try_models.py
 - python try_pipeline.py ingest data\uploads\sample.txt
 - python try_pipeline.py ask "<question>" [document_id]
+- python try_documents.py add <file> | list | delete <id>
+- git status ; git add . ; git commit -m "..." ; git log --oneline
+- Next docs: frontend/node_modules/next/dist/docs/01-app/
 
 ## Dependencies
 Backend: fastapi, uvicorn[standard], pydantic-settings, pytest, httpx, pypdf,
-langchain-text-splitters, google-genai, chromadb
-Frontend: Next.js 16, React, TypeScript, Tailwind CSS
+langchain-text-splitters, google-genai, chromadb, python-multipart
+Frontend: next 16.4.0, react 19.3.0, TypeScript, Tailwind CSS 4, react-markdown
 
 ## Environment Variables
-ENVIRONMENT, FRONTEND_ORIGIN, GEMINI_API_KEY (backend/.env only),
-GEMINI_MODEL (pick from try_models.py output), GEMINI_EMBEDDING_MODEL,
+Backend: ENVIRONMENT, FRONTEND_ORIGIN (must be exactly http://localhost:3000),
+GEMINI_API_KEY (backend/.env only), GEMINI_MODEL, GEMINI_EMBEDDING_MODEL,
 CHUNK_SIZE, CHUNK_OVERLAP, TOP_K
+Frontend: NEXT_PUBLIC_API_URL (optional, default http://127.0.0.1:8000)
 
 ## Known Issues
-- Free tier: 100 embedded texts/min (ingest paced); generation limits are low.
-- Gemini 503 "high demand" spikes are Google-side; if persistent, change GEMINI_MODEL.
+- SECURITY: backend/.env was inside the project zip sent to Claude (twice).
+  It is NOT tracked by Git (verified), but if any zip was shared, rotate the
+  Gemini key. Always zip without backend/.env.
+- Free tier: 100 embedded texts/min; big PDFs upload slowly (UI shows a timer).
+- Gemini 503/429 spikes are Google-side (shown as a red error bubble).
 - Scanned PDFs rejected (no OCR).
-- Footer-only tiny chunks pollute retrieval; consider filtering.
-- Retrieval always returns nearest chunks even if irrelevant; rely on the
-  prompt's "not found" rule; measure before adding a threshold.
-- print() in embeddings.py for progress; switch to logging later.
+- Footer-only tiny chunks pollute retrieval; retrieval always returns nearest
+  chunks even if irrelevant. A test documents this behaviour today.
+- print() in embeddings.py; switch to logging later.
 - Repo is local only (not on GitHub yet).
-- Never share backend/.env when uploading the project; rotate the API key.
-- Chroma stores no page count or upload time; document_service must keep them.
+- documents.json registry is single-user only; upload limit constant in service.
+- Failed ingestion may leave partial Chroma chunks.
+- Upload request blocks until ingestion finishes (production fix: background job + polling).
+- 422 validation errors have list-shaped detail (api.ts handles both shapes).
+- Loader, service, retrieval and API tests still pending.
+- Chunking tests were written without being run by Claude (no internet in its
+  sandbox); first real run is the user's.
+- Backend must be running or the frontend shows "Cannot reach the backend".
+- Limits duplicated in frontend and backend (10 MB upload, 1000-char question).
+- Chat history is React state only; no conversation memory sent to the backend.
+- Markdown rendering has no GFM (tables, strikethrough); would need remark-gfm.
+- No in-app theme toggle (follows the OS theme).
+- Delete uses window.confirm (simple, not a styled modal).
+- Dashboard stats are summed client-side from the full document list.
+- "Gemini configured" pill only means a key exists, not that it is valid.
+- User has NOT yet reported npm tsc / lint / build output for several steps (ask again).
+- try_*.py helper scripts still in backend/ (delete before the documentation phase).
 
 ## Architecture Decisions
 - Settings in core/config.py; routers per feature; CORS only FRONTEND_ORIGIN
-- Frontend talks to backend only via lib/api.ts
-- Plain dataclasses inside rag/ (PageText, Chunk, SearchResult, IngestResult,
-  Answer); Pydantic schemas only at the API boundary (models/schemas.py)
-- google-genai SDK used directly; own small retriever (no LangChain retriever)
-- Prompts only in prompts.py
-- Each rag module has its own user-safe error class; API layer maps them to HTTP codes
-- ask() returns a fixed message WITHOUT calling Gemini when retrieval is empty
-- ingest_document() embeds first, then deletes old copy, then stores
-- ErrorResponse uses {"detail": str} to match FastAPI's default errors
+- Frontend talks to backend only via lib/api.ts (single request() wrapper,
+  ApiError with human-readable message)
+- Plain dataclasses inside rag/ (PageText, Chunk, SearchResult); Pydantic
+  schemas only at the API boundary
+- google-genai SDK used directly; own small retriever; prompts in prompts.py
+- Each rag module has its own user-safe error class
+- Service layer takes filename + bytes (not UploadFile)
+- Uploads saved as <uuid><ext>; display names in backend/data/documents.json
+- Documents errors: 400/413/404/422/502/503; chat errors: 400/502/503
+- No chat_service.py: pipeline.ask() is the service
+- Splitting is per page so page citations stay exact
+- Frontend type is UploadedDocument (not Document: clashes with the DOM type)
+- Next 16 facts: layouts/pages are server components by default; metadata exports are
+  server-only (client pages get a tiny server layout.tsx for titles); title.template
+  applies to child segments only; useSearchParams needs a Suspense boundary or
+  `npm run build` fails; LayoutProps<"/"> is a global helper
+- Styling: Tailwind v4 (mobile-first), zinc neutrals + indigo accent, dark mode via
+  prefers-color-scheme
+- Markdown: react-markdown for ASSISTANT messages only; links open in a new tab
+- Page owns data and API calls; child components get data via props and report
+  events via callbacks
+- Testing: pytest.ini sets pythonpath=. and testpaths=tests; tests use TestClient
+  (no server) and monkeypatch; tests must NEVER call Gemini and must NEVER touch the
+  real data/chroma folder or documents.json (use tmp_path + monkeypatch of module
+  constants such as vector_store.CHROMA_DIR and document_service.DATA_DIR/UPLOADS_DIR/
+  REGISTRY_FILE)
+- Chunking tests use unique-word helper text (make_text) so overlap and page
+  boundaries can be proven; settings are changed with monkeypatch.setattr(get_settings(), ...)
+- Backend modules have no import-time side effects (Gemini client and Chroma are
+  created inside functions), so importing app.main in tests is safe
 - Git repo root is C:\LearnExa
 
 ## Next Exact Step
-Confirm schemas test, commit, then design where document metadata (pages,
-upload time) is kept and write document_service.py.
+Run pytest -v and confirm 24 passed (paste failures in full), commit
+("Add chunking tests"), and report npm tsc/lint/build output. Then 12.3:
+tests/test_loader.py using tmp_path files (txt loads as page 1; empty txt, unsupported
+extension, non-UTF-8 txt and corrupted PDF raise DocumentLoadError). Then 12.4
+document_service validation tests, 12.5 retrieval/vector store tests with fake
+embeddings and a temp Chroma dir, 12.6 API tests with pipeline/service monkeypatched.
