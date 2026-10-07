@@ -1,35 +1,40 @@
 # LearnExa Claude Handoff
 
 ## Current Phase
-Phase 1 of 15 — Project Setup
+Phase 3 of 15 — Chunking
 
 ## Last Completed Step
-1.1 — Git repo + FastAPI backend skeleton + /health
+3.1 — splitter.py written; tested with try_splitter.py
 
 ## Last Completed File
-backend/app/main.py
+backend/app/rag/splitter.py
 
 ## Current Working Feature
-GET /health on http://127.0.0.1:8000
+split_pages(pages, document_id, document_name) returns list[Chunk]
 
 ## Next File
-frontend/ (create-next-app output), then frontend/lib/api.ts
+backend/app/rag/embeddings.py
 
 ## Next Exact Task
-Step 1.2: scaffold Next.js (App Router, TypeScript, Tailwind), show backend
-health status on the home page. Explain React components, state, useEffect,
-and why the page is a client component.
+Phase 4: user must get a Gemini API key from Google AI Studio and put it in
+backend/.env (never commit it). Add the Gemini SDK to requirements.txt (verify
+the current package name first), write embeddings.py with document embeddings
+and query embeddings (configurable GEMINI_EMBEDDING_MODEL), test on a few chunks.
+Explain what embeddings are. Do not claim a fixed vector dimension unless verified.
 
 ## Working Commands
-cd backend ; uvicorn app.main:app --reload
-git add . ; git commit -m "..."
+cd backend ; .venv\Scripts\activate.bat ; uvicorn app.main:app --reload
+cd frontend ; npm run dev
+python try_splitter.py data\uploads\notes.pdf
 
 ## Important Decisions
-- One file at a time, always complete file contents
+- One step at a time, complete file contents, WHAT/WHY/HOW/INTERVIEW
 - No overengineering (no agents, LangGraph, Redux, etc.)
 - Gemini key stays in backend only
-- Explain WHAT / WHY / HOW / INTERVIEW for each component
-- User is on Windows, using VS Code with PowerShell; beginner level, go slowly
+- User is a beginner on Windows, VS Code, uses cmd terminal (activate.bat);
+  go slowly, explain every command and file, create files via Explorer
+- Project root is C:\LearnExa
+- Test PDF: backend/data/uploads/notes.pdf (143 pages, OneNote export)
 
 ## Known Problems
 None.
