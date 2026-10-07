@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DocumentList from "@/components/documents/DocumentList";
+import UploadZone from "@/components/documents/UploadZone";
 import { ApiError, deleteDocument, getDocuments } from "@/lib/api";
 import type { UploadedDocument } from "@/lib/types";
 
@@ -35,8 +36,7 @@ export default function DocumentsPage() {
   // Changing this number re-runs the effect below. It powers the Retry button.
   const [reloadKey, setReloadKey] = useState(0);
 
-  // Runs after the first render, and again whenever reloadKey changes
-  // (that is what the [reloadKey] dependency list means).
+  // Runs after the first render, and again whenever reloadKey changes.
   useEffect(() => {
     getDocuments()
       .then((docs) => setDocuments(docs))
@@ -50,8 +50,12 @@ export default function DocumentsPage() {
     setReloadKey((key) => key + 1);
   }
 
+  // Called by UploadZone after a successful upload: put the newest first.
+  function handleUploaded(document: UploadedDocument) {
+    setDocuments((current) => [document, ...current]);
+  }
+
   async function handleDelete(document: UploadedDocument) {
-    // window.confirm is the simplest possible "are you sure?" dialog.
     const confirmed = window.confirm(
       `Delete "${document.name}"? Its searchable content will be removed too.`
     );
@@ -61,7 +65,6 @@ export default function DocumentsPage() {
     setError(null);
     try {
       await deleteDocument(document.document_id);
-      // Backend succeeded, so drop the document from our list without refetching.
       setDocuments((current) =>
         current.filter((d) => d.document_id !== document.document_id)
       );
@@ -82,6 +85,8 @@ export default function DocumentsPage() {
             : `${documents.length} ${documents.length === 1 ? "document" : "documents"} ready to chat with.`}
         </p>
       </header>
+
+      <UploadZone onUploaded={handleUploaded} />
 
       {loading ? (
         <LoadingSkeleton />
