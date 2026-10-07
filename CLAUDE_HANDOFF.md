@@ -1,48 +1,45 @@
 # LearnExa Claude Handoff
 
 ## Current Phase
-Phase 6 of 15 — Retrieval
+Phase 8 of 15 — Complete RAG
 
 ## Last Completed Step
-6.1 — retriever.py written; tested with try_retriever.py
+8.1 — pipeline.py and try_pipeline.py written (not yet run by the user)
 
 ## Last Completed File
-backend/app/rag/retriever.py
+backend/app/rag/pipeline.py
 
 ## Current Working Feature
-retrieve(question, top_k=None, document_id=None) -> list[SearchResult]
-(embeds question, searches Chroma). Raises RetrievalError for empty question.
+ingest_document(path, document_id, name) and ask(question, document_id=None)
+returning Answer(answer, sources). Empty retrieval returns a fixed message
+without calling Gemini.
 
 ## Next File
-backend/app/rag/prompts.py, then a Gemini generation module
+backend/app/api/documents.py (Phase 9), once the user confirms the test results
 
 ## Next Exact Task
-Phase 7: user must pick a current Gemini model for GEMINI_MODEL (verify the
-name; do not guess; model names change). Write prompts.py (short RAG prompt:
-use only context, say when not found, cite sources), a generation function
-using google-genai, test with retrieve() output. Handle rate limits and
-errors with a user-safe GenerationError. Explain hallucination honestly
-(RAG reduces, does not eliminate).
+Confirm pipeline test output with the user. Then Phase 9: schemas
+(models/schemas.py), document_service.py (uuid ids, saving uploads, listing,
+deleting), then POST /api/documents/upload, GET /api/documents,
+DELETE /api/documents/{id}, POST /api/chat. Map the rag error classes to HTTP
+status codes. One file at a time.
 
 ## Working Commands
-cd backend ; .venv\Scripts\activate.bat ; uvicorn app.main:app --reload
-cd frontend ; npm run dev
-python try_retriever.py "What is LangChain?"
+cd backend ; .venv\Scripts\activate.bat
+python try_pipeline.py ingest data\uploads\sample.txt
+python try_pipeline.py ask "your question about sample.txt" sample
+python try_pipeline.py ask "anything" does_not_exist
 
 ## Important Decisions
-- One step at a time, complete file contents, WHAT/WHY/HOW/INTERVIEW
-- No overengineering (no agents, LangGraph, Redux, etc.)
-- Gemini key stays in backend/.env only; never paste in chat or commit
-- User is a beginner on Windows, VS Code, cmd terminal (activate.bat);
-  go slowly, explain every command and file
-- Project root is C:\LearnExa
-- Test PDF: backend/data/uploads/notes.pdf (143 pages, OneNote export)
-- Measured embedding length: 3072 (gemini-embedding-001)
-- Free tier embedding limit: 100 texts/minute (ingest is paced)
+- One step at a time, complete files, WHAT/WHY/HOW/INTERVIEW
+- No overengineering; Gemini key only in backend/.env, never in chat, zips or Git
+- User is a beginner on Windows, VS Code, cmd (activate.bat); go slowly
+- Project root C:\LearnExa; test PDF backend/data/uploads/notes.pdf
+- Free-tier limits matter: embeddings 100 texts/min, low generation limits
+- Prefer sample.txt for quick pipeline tests (notes.pdf takes minutes to embed)
 
 ## Known Problems
-Retrieval returns tiny footer-only chunks and always returns nearest chunks
-even when unrelated.
+Footer-only chunks; retrieval returns nearest chunks even if unrelated.
 
 ## Do Not Change
 - Folder structure in the master prompt

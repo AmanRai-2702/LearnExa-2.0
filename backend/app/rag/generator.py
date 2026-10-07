@@ -10,8 +10,8 @@ from app.rag.vector_store import SearchResult
 
 logger = logging.getLogger(__name__)
 
-MAX_ATTEMPTS = 3
-WAIT_SECONDS = 10  # wait 10s, then 20s, when Gemini is busy or rate-limited
+MAX_ATTEMPTS = 5
+WAIT_SECONDS = 10  # waits 10s, 20s, 30s, 40s between attempts when Gemini is busy
 
 
 class GenerationError(Exception):
@@ -56,6 +56,11 @@ def generate_answer(question: str, results: list[SearchResult]) -> str:
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_INSTRUCTION,
                     temperature=0.2,  # low = stick to the context, less creative
+                    # We pass no tools, so turn off automatic function calling.
+                    # This also removes the SDK's AFC warning message.
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                        disable=True
+                    ),
                 ),
             )
             answer = (response.text or "").strip()
