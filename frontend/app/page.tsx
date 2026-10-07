@@ -18,7 +18,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-6 p-8">
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 p-8">
       <h1 className="text-4xl font-semibold tracking-tight">LearnExa</h1>
       <p className="text-zinc-600 dark:text-zinc-400">
         Upload your study material and ask questions about it.
