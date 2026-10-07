@@ -1,36 +1,37 @@
 # LearnExa Claude Handoff
 
 ## Current Phase
-Phase 12 of 15 — Testing (finishing); Phase 13 (error handling) is next
+Phase 13 of 15 — Error Handling (13.1 done and committed; 13.2 next)
 
 ## Last Completed Step
-12.6 — tests/conftest.py, tests/test_api.py written and tests/test_health.py updated
-(client fixture moved to conftest). Expected total: 111 passed. User confirmed 80
-passed before this step.
+13.1 — gemini_errors.py (new), embeddings.py, generator.py, pipeline.py and
+document_service.py hardened; test_gemini_errors.py and test_cleanup.py added.
+User confirmed 141 passed and committed (bfa6248).
 
 ## Last Completed File
-backend/tests/test_api.py
+backend/tests/test_cleanup.py
 
 ## Current Working Feature
-Full app works end to end. Backend test suite covers health/CORS, chunking, loader,
-document service, vector store, retriever and both API routers.
+Full app works end to end. Backend failures are retried or reported with a
+friendly message, and failed saves leave no orphan chunks or files.
 
 ## Next File
-None for Phase 12 once pytest shows 111 passed. Phase 13 starts with a review.
+backend/try_similarity.py (temporary measurement script, 13.2 Part B)
 
 ## Next Exact Task
-Confirm `pytest -v` shows 111 passed (from backend, venv active) and commit with
-"Add API tests and share the client fixture". If test_api.py fails, fix from the pasted
-output (possible: empty-file upload returning 422 instead of 400). Ask again for the
-output of npm run tsc/lint/build (never shown). Then Phase 13: go through the master
-prompt's error list one by one (missing Gemini key, invalid key, Gemini API errors,
-invalid file type, empty file, oversized file, PDF extraction failure, embedding
-failure, Chroma failure, empty question, retrieval failure, no relevant context).
-For each: say where it is handled, verify it (manual test or automated test), fix gaps,
-and check the frontend message. Ideas to examine: partial Chroma chunks after failed
-ingestion, "Gemini configured" only meaning a key exists, 422 list-shaped detail.
-Then Phase 14 (README, docs/architecture.md, docs/rag-explanation.md; delete try_*.py
-first) and Phase 15 (docs/interview-preparation.md based on the real implementation).
+1. Ask for npx tsc --noEmit, npm run lint, npm run build output (never shown)
+   and the manual walkthrough results (backend off; .png; empty file; 12.9 MB
+   notes.pdf; fake PDF; valid txt; no documents + chat; WRONG API KEY in
+   backend/.env then chat and upload; backend stopped mid-chat; off-topic
+   question; deleted-document chat link). Fix any gap found.
+2. When the user says "next": write try_similarity.py. It embeds related and
+   unrelated questions with embed_query and prints the top similarity per
+   question (embedding calls only, NO generation calls). Decide a cutoff only
+   from the user's real numbers; if the numbers overlap, recommend no cutoff.
+3. End of Phase 13: give COMPLETE state files, commit.
+4. Phase 14: delete try_*.py, write README.md, docs/architecture.md,
+   docs/rag-explanation.md. Phase 15: docs/interview-preparation.md from the
+   real implementation.
 
 ## Working Commands
 cd backend ; .venv\Scripts\activate.bat ; uvicorn app.main:app --reload
@@ -38,39 +39,40 @@ cd backend ; .venv\Scripts\activate.bat ; pytest -v
 cd frontend ; npm run dev ; npx tsc --noEmit ; npm run lint ; npm run build
 Swagger: http://localhost:8000/docs
 python try_documents.py add data\uploads\sample.txt   (seed a test document)
+git archive -o learnexa-phase13.zip HEAD   (zip without .env)
 
 ## Important Decisions
 - One step at a time, WHAT/WHY/HOW/INTERVIEW, CURRENT PROGRESS footer
 - GIVE CODE DIRECTLY IN CHAT as code blocks (no file cards)
 - Always provide complete files; no overengineering
 - AFTER EVERY PHASE give the COMPLETE PROJECT_STATE.md and CLAUDE_HANDOFF.md
-  (full files, never small edits)
 - ALWAYS include a Git section (exact commands) after every step
-- Gemini key only in backend/.env, never in chat, zips or Git. The user has
-  zipped backend/.env twice: remind them to exclude it and to rotate the key if shared
+- Gemini key only in backend/.env, never in chat, zips or Git; zip with
+  git archive; rotate the key if a zip containing .env was ever shared
 - User is a beginner on Windows, VS Code, cmd (activate.bat); go slowly
-- Project root C:\LearnExa; test files backend/data/uploads/notes.pdf (12.9 MB, over
-  the 10 MB limit: use it only for "too large" tests), sample.txt
-- Frontend type names: UploadedDocument, Source, Message; errors are ApiError(message, status)
+- Project root C:\LearnExa; test files backend/data/uploads/notes.pdf (12.9 MB,
+  over the 10 MB limit: use only for "too large" tests), sample.txt
+- Frontend type names: UploadedDocument, Source, Message; errors are
+  ApiError(message, status)
 - UI style: Tailwind, zinc neutrals + indigo accent
 - Page owns data; child components use props + callbacks
-- Any page using useSearchParams must wrap it in Suspense (verify with npm run build)
+- Any page using useSearchParams must wrap it in Suspense
 - Do not add dependencies without explaining
 - Tests: never call Gemini, never touch real data/chroma or documents.json
-- Claude's sandbox has no internet and cannot install the app's dependencies: it cannot
-  run the real tests, so say plainly when tests were not run by Claude (loader behaviours
-  were verified against real pypdf)
-- Read the real source files from the user's zip before writing code that depends on
-  them (never guess names); never open or print backend/.env
-- The user often replies "move on" without reporting results: gently ask for build/lint
-  output and pytest output, and check the pass count matches the expected number
+- Claude's sandbox has no internet and cannot install the app's dependencies:
+  it cannot run the real tests, so say plainly when tests were not run by Claude
+- Read the real source files from the user's zip before writing code that
+  depends on them; never open or print backend/.env
+- Never invent metrics: measure similarity scores before choosing a cutoff
+- The user often replies "move on" without reporting results: gently ask for
+  build/lint output and pytest output, and check the pass count matches
 
 ## Known Problems
-Footer-only chunks (documented by a test, not fixed); irrelevant retrieval; Gemini
-503/429 spikes; JSON registry single-user; upload blocks until ingestion completes;
-duplicated limits in frontend and backend; no chat memory; no GFM tables in answers;
-no frontend tests; build/lint output never shown; test_api.py not yet run by the user;
-backend/.env was included in shared zips.
+Footer-only chunks; irrelevant retrieval relies on the prompt only (no measured
+cutoff yet); Gemini 503/429 spikes; JSON registry single-user; upload blocks
+until ingestion completes; duplicated limits in frontend and backend; no chat
+memory; no GFM tables in answers; no frontend tests; tsc/lint/build output
+never shown; manual error walkthrough not reported.
 
 ## Do Not Change
 - Folder structure in the master prompt
