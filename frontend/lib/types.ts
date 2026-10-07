@@ -44,3 +44,11 @@ export interface HealthResponse {
   environment: string;
   gemini_configured: boolean;
 }
+
+// FRONTEND ONLY (not sent to the backend): one entry in the chat on screen.
+// A "discriminated union": check `role` first, and TypeScript then knows which
+// other fields exist (only assistant messages have sources).
+export type Message =
+  | { id: string; role: "user"; text: string }
+  | { id: string; role: "assistant"; text: string; sources: Source[] }
+  | { id: string; role: "error"; text: string };
