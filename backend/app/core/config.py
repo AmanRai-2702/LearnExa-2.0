@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     gemini_model: str = ""
     gemini_embedding_model: str = "gemini-embedding-001"
 
+    # RAG tuning values (starting points, not universal optimums)
+    chunk_size: int = 1000      # max characters per chunk
+    chunk_overlap: int = 150    # characters repeated between neighbouring chunks
+    top_k: int = 5              # how many chunks to retrieve (used in Phase 6)
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
