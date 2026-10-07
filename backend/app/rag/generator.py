@@ -1,0 +1,80 @@
+import logging
+import time
+
+from google import genai
+from google.genai import types
+
+from app.core.config import get_settings
+from app.rag.prompts import SYSTEM_INSTRUCTION, build_user_prompt
+from app.rag.vector_store import SearchResult
+
+logger = logging.getLogger(__name__)
+
+MAX_ATTEMPTS = 3
+WAIT_SECONDS = 10  # wait 10s, then 20s, when Gemini is busy or rate-limited
+
+
+class GenerationError(Exception):
+    """Raised when an answer cannot be generated. The message is safe to show users."""
+
+
+def _friendly_message(code: int | None) -> str:
+    if code in (401, 403):
+        return "Gemini rejected the request. Check that your API key is valid."
+    if code == 404:
+        return "The configured Gemini model was not found. Check GEMINI_MODEL in backend/.env."
+    if code == 429:
+        return "Gemini rate limit reached. Please wait a minute and try again."
+    if code == 503:
+        return "Gemini is busy right now. Please try again shortly."
+    return "Could not generate an answer with Gemini. Please try again."
+
+
+def generate_answer(question: str, results: list[SearchResult]) -> str:
+    """Ask Gemini to answer the question using the retrieved chunks."""
+    settings = get_settings()
+
+    if not settings.gemini_api_key:
+        raise GenerationError(
+            "The Gemini API key is missing. Add GEMINI_API_KEY to backend/.env."
+        )
+    if not settings.gemini_model:
+        raise GenerationError("No Gemini model is set. Add GEMINI_MODEL to backend/.env.")
+    if not question.strip():
+        raise GenerationError("Please enter a question.")
+    if not results:
+        raise GenerationError("There is no document context to answer from.")
+
+    client = genai.Client(api_key=settings.gemini_api_key)
+    prompt = build_user_prompt(question, results)
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            response = client.models.generate_content(
+                model=settings.gemini_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    temperature=0.2,  # low = stick to the context, less creative
+                ),
+            )
+            answer = (response.text or "").strip()
+            if not answer:
+                raise GenerationError(
+                    "Gemini returned an empty answer. Try rephrasing the question."
+                )
+            return answer
+        except GenerationError:
+            raise
+        except Exception as exc:
+            code = getattr(exc, "code", None)
+            logger.warning(
+                "Gemini generation failed (attempt %s of %s): %s",
+                attempt, MAX_ATTEMPTS, str(exc)[:300],
+            )
+            if code in (429, 503) and attempt < MAX_ATTEMPTS:
+                time.sleep(WAIT_SECONDS * attempt)
+                continue
+            raise GenerationError(_friendly_message(code)) from exc
+
+    raise GenerationError(_friendly_message(None))  # not normally reached

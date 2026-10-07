@@ -1,32 +1,33 @@
 # LearnExa Claude Handoff
 
 ## Current Phase
-Phase 5 of 15 — Chroma
+Phase 6 of 15 — Retrieval
 
 ## Last Completed Step
-5.1 — vector_store.py written; tested with try_chroma.py
+6.1 — retriever.py written; tested with try_retriever.py
 
 ## Last Completed File
-backend/app/rag/vector_store.py
-
-## Current Working Feature
-add_chunks(chunks, embeddings), search(query_embedding, top_k, document_id),
-count_chunks(), delete_document(). Persistent Chroma at backend/data/chroma.
-
-## Next File
 backend/app/rag/retriever.py
 
+## Current Working Feature
+retrieve(question, top_k=None, document_id=None) -> list[SearchResult]
+(embeds question, searches Chroma). Raises RetrievalError for empty question.
+
+## Next File
+backend/app/rag/prompts.py, then a Gemini generation module
+
 ## Next Exact Task
-Phase 6: retriever.py combines embed_query + vector_store.search using
-TOP_K from settings. Return SearchResult list. Handle empty question and
-no results. Explain top-k (too small / too large), irrelevant retrieval.
-Test with a script. Do not add rerankers or thresholds yet.
+Phase 7: user must pick a current Gemini model for GEMINI_MODEL (verify the
+name; do not guess; model names change). Write prompts.py (short RAG prompt:
+use only context, say when not found, cite sources), a generation function
+using google-genai, test with retrieve() output. Handle rate limits and
+errors with a user-safe GenerationError. Explain hallucination honestly
+(RAG reduces, does not eliminate).
 
 ## Working Commands
 cd backend ; .venv\Scripts\activate.bat ; uvicorn app.main:app --reload
 cd frontend ; npm run dev
-python try_chroma.py ingest data\uploads\notes.pdf
-python try_chroma.py search "What is LangChain?"
+python try_retriever.py "What is LangChain?"
 
 ## Important Decisions
 - One step at a time, complete file contents, WHAT/WHY/HOW/INTERVIEW
@@ -37,9 +38,11 @@ python try_chroma.py search "What is LangChain?"
 - Project root is C:\LearnExa
 - Test PDF: backend/data/uploads/notes.pdf (143 pages, OneNote export)
 - Measured embedding length: 3072 (gemini-embedding-001)
+- Free tier embedding limit: 100 texts/minute (ingest is paced)
 
 ## Known Problems
-None.
+Retrieval returns tiny footer-only chunks and always returns nearest chunks
+even when unrelated.
 
 ## Do Not Change
 - Folder structure in the master prompt
