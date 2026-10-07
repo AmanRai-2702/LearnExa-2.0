@@ -14,7 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LearnExa",
+  title: {
+    // Pages without their own title (the Dashboard) get the default.
+    default: "LearnExa",
+    // Child pages that set title: "Documents" become "Documents · LearnExa".
+    template: "%s · LearnExa",
+  },
   description: "Upload your study material and ask questions about it.",
 };
 

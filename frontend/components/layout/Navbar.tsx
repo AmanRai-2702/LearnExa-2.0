@@ -11,7 +11,8 @@ const NAV_LINKS = [
 ];
 
 // Styling is kept in named constants so the JSX below stays readable.
-const LINK_BASE = "rounded-md px-3 py-1.5 text-sm font-medium transition-colors";
+const LINK_BASE =
+  "rounded-md px-2 py-1.5 text-sm font-medium transition-colors sm:px-3";
 const LINK_ACTIVE = "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50";
 const LINK_INACTIVE =
   "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50";
@@ -29,11 +30,17 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-10 border-b border-zinc-200 bg-background/80 backdrop-blur dark:border-zinc-800">
       <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+        {/* On very small screens the text is hidden, so the logo square alone is
+            shown. aria-label keeps the link understandable for screen readers. */}
+        <Link
+          href="/"
+          aria-label="LearnExa home"
+          className="flex items-center gap-2 font-semibold tracking-tight"
+        >
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-sm text-white">
             L
           </span>
-          LearnExa
+          <span className="hidden sm:inline">LearnExa</span>
         </Link>
 
         <ul className="flex items-center gap-1">

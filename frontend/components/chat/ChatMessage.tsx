@@ -1,10 +1,22 @@
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import type { Message } from "@/lib/types";
 import SourceCard from "./SourceCard";
 
 interface ChatMessageProps {
   message: Message;
 }
+
+// Custom rendering for specific markdown elements. Here: links open in a NEW
+// tab, so clicking one never navigates away from the conversation.
+// rel="noopener noreferrer" stops the opened page from getting access to ours.
+// (Defined outside the component so it is created only once.)
+const MARKDOWN_COMPONENTS: Components = {
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  ),
+};
 
 export default function ChatMessage({ message }: ChatMessageProps) {
   // Each early return handles one kind of message. After the check,
@@ -40,7 +52,9 @@ export default function ChatMessage({ message }: ChatMessageProps) {
       {/* ReactMarkdown turns "**bold**" and "- item" into real HTML elements.
           The "markdown" class (globals.css) styles them. */}
       <div className="markdown break-words leading-relaxed">
-        <ReactMarkdown>{message.text}</ReactMarkdown>
+        <ReactMarkdown components={MARKDOWN_COMPONENTS}>
+          {message.text}
+        </ReactMarkdown>
       </div>
 
       {/* No sources (for example "no documents uploaded") means no Sources section. */}
