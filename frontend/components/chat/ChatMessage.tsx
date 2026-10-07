@@ -1,3 +1,4 @@
+import ReactMarkdown from "react-markdown";
 import type { Message } from "@/lib/types";
 import SourceCard from "./SourceCard";
 
@@ -35,8 +36,11 @@ export default function ChatMessage({ message }: ChatMessageProps) {
       <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
         LearnExa
       </p>
-      <div className="whitespace-pre-wrap break-words leading-relaxed">
-        {message.text}
+
+      {/* ReactMarkdown turns "**bold**" and "- item" into real HTML elements.
+          The "markdown" class (globals.css) styles them. */}
+      <div className="markdown break-words leading-relaxed">
+        <ReactMarkdown>{message.text}</ReactMarkdown>
       </div>
 
       {/* No sources (for example "no documents uploaded") means no Sources section. */}
