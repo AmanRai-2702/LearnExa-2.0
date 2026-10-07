@@ -6,3 +6,4 @@ httpx
 pypdf
 langchain-text-splitters
 google-genai
+chromadb

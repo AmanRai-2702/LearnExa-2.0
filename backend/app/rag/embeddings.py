@@ -1,10 +1,19 @@
+import logging
+import time
+
 from google import genai
 from google.genai import types
 
 from app.core.config import get_settings
 
-# Gemini accepts many texts in one request; we send them in groups.
-BATCH_SIZE = 100
+logger = logging.getLogger(__name__)
+
+BATCH_SIZE = 20
+# Free tier allows 100 embedding requests per minute (each text counts as one).
+# We stay below that so large documents do not trigger 429 errors.
+MAX_TEXTS_PER_MINUTE = 80
+MAX_ATTEMPTS = 4
+WAIT_SECONDS = 20  # fallback wait if we still hit a 429: 20s, 40s, 60s
 
 
 class EmbeddingError(Exception):
@@ -20,6 +29,40 @@ def _get_client() -> genai.Client:
     return genai.Client(api_key=settings.gemini_api_key)
 
 
+def _friendly_message(code: int | None) -> str:
+    if code in (400, 401, 403):
+        return "Gemini rejected the request. Check that your API key is valid."
+    if code == 429:
+        return "Gemini rate limit reached. Please wait a few minutes and try again."
+    return "Could not create embeddings with Gemini. Please try again."
+
+
+def _embed_batch(
+    client: genai.Client, model: str, batch: list[str], task_type: str
+) -> list[list[float]]:
+    """Embed one batch, retrying if Gemini reports a rate limit (error 429)."""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            response = client.models.embed_content(
+                model=model,
+                contents=batch,
+                config=types.EmbedContentConfig(task_type=task_type),
+            )
+            return [item.values for item in response.embeddings]
+        except Exception as exc:
+            code = getattr(exc, "code", None)
+            logger.warning(
+                "Gemini embedding failed (attempt %s of %s): %s",
+                attempt, MAX_ATTEMPTS, str(exc)[:300],
+            )
+            if code == 429 and attempt < MAX_ATTEMPTS:
+                time.sleep(WAIT_SECONDS * attempt)
+                continue
+            raise EmbeddingError(_friendly_message(code)) from exc
+
+    raise EmbeddingError(_friendly_message(None))  # not normally reached
+
+
 def _embed(texts: list[str], task_type: str) -> list[list[float]]:
     """Send texts to Gemini and return one vector per text, in the same order."""
     if not texts:
@@ -28,25 +71,18 @@ def _embed(texts: list[str], task_type: str) -> list[list[float]]:
     settings = get_settings()
     client = _get_client()
     vectors: list[list[float]] = []
+    total_batches = (len(texts) + BATCH_SIZE - 1) // BATCH_SIZE
 
-    try:
-        for start in range(0, len(texts), BATCH_SIZE):
-            batch = texts[start : start + BATCH_SIZE]
-            response = client.models.embed_content(
-                model=settings.gemini_embedding_model,
-                contents=batch,
-                config=types.EmbedContentConfig(task_type=task_type),
-            )
-            vectors.extend(item.values for item in response.embeddings)
-    except Exception as exc:
-        code = getattr(exc, "code", None)
-        if code in (400, 401, 403):
-            message = "Gemini rejected the request. Check that your API key is valid."
-        elif code == 429:
-            message = "Gemini rate limit reached. Please wait a moment and try again."
-        else:
-            message = "Could not create embeddings with Gemini. Please try again."
-        raise EmbeddingError(message) from exc
+    for number, start in enumerate(range(0, len(texts), BATCH_SIZE), start=1):
+        batch = texts[start : start + BATCH_SIZE]
+        vectors.extend(
+            _embed_batch(client, settings.gemini_embedding_model, batch, task_type)
+        )
+
+        # Pace ourselves between batches (not after the last one).
+        if number < total_batches:
+            print(f"Embedded batch {number} of {total_batches}...", flush=True)
+            time.sleep(len(batch) * 60 / MAX_TEXTS_PER_MINUTE)
 
     return vectors
 
