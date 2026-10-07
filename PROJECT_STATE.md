@@ -7,8 +7,10 @@ component in an interview.
 
 ## Current Phase
 Phase 13 — Error Handling. Step 13.1 (backend hardening) is done and committed
-(bfa6248). Step 13.2 (manual frontend error walkthrough + measured similarity
-experiment) is next.
+(bfa6248). Step 13.2 is being done ON THE WEBSITE: an 11-row manual error
+walkthrough, plus reading the "Similarity" number on source cards for a related
+and an off-topic question. backend/try_similarity.py exists as an optional,
+more precise alternative.
 
 ## Completed Phases
 - Phase 1 — Project Setup
@@ -29,38 +31,44 @@ experiment) is next.
 - .gitignore, backend/requirements.txt, backend/.env.example, backend/pytest.ini
 - backend/tests/: conftest.py (shared `client` fixture), test_health.py (6),
   test_chunking.py (18), test_loader.py (15), test_document_service.py (18),
-  test_retrieval.py (23), test_api.py (31), test_gemini_errors.py (21, new),
-  test_cleanup.py (9, new)  -> 141 passed
+  test_retrieval.py (23), test_api.py (31), test_gemini_errors.py (21),
+  test_cleanup.py (9)  -> 141 passed
 - backend/app/core/config.py, main.py
 - backend/app/api/: health.py, documents.py, chat.py
 - backend/app/rag/: loader.py, splitter.py, embeddings.py, vector_store.py,
-  retriever.py, prompts.py, generator.py, pipeline.py,
-  gemini_errors.py (new: is_invalid_key_error)
+  retriever.py, prompts.py, generator.py, pipeline.py, gemini_errors.py
 - backend/app/models/schemas.py
 - backend/app/services/document_service.py
-- backend/try_*.py helpers (temporary, delete before Phase 14)
+- backend/try_*.py helpers (temporary, delete before Phase 14), including
+  try_similarity.py (optional, not yet run)
 - frontend/lib/types.ts, frontend/lib/api.ts
 - frontend/app/: layout.tsx, globals.css, page.tsx (Dashboard),
   documents/page.tsx + layout.tsx, chat/page.tsx + layout.tsx
 - frontend/components/: layout/Navbar, documents/{DocumentCard, DocumentList,
-  UploadZone}, chat/{SourceCard, ChatMessage, ChatInput, ChatWindow}
+  UploadZone}, chat/{SourceCard (shows "Similarity 0.xx"), ChatMessage,
+  ChatInput, ChatWindow}
 
 ## Current File
-None (13.2 is a manual check plus one temporary script)
+None (manual website check in progress)
 
 ## Next File
-backend/try_similarity.py (temporary measurement script for 13.2, Part B)
+None until the walkthrough results are reported. Possible result: a small
+change to retriever.py/pipeline.py (a measured cutoff), a message fix in a
+backend module or frontend component, or no change.
 
 ## Working Features
 - All backend endpoints: /health, /api/documents (upload/list/delete), /api/chat
 - Frontend: Dashboard, Documents (list/delete/upload), Chat (markdown answers,
-  sources, document selector, error bubbles), per-page titles, system dark mode
+  sources with similarity, document selector, error bubbles), per-page titles,
+  system dark mode
 - Gemini errors: 429 and 503 retried with growing waits in embeddings AND
-  generator; wrong key detected for 401/403 and for 400 mentioning "api key"
-  (one shared helper); other errors fail at once with a friendly message
+  generator; wrong key detected for 401/403 and for 400 mentioning "api key";
+  other errors fail at once with a friendly message
 - Undo on failure: failed Chroma save removes partial chunks; failed registry
   save removes the file and the chunks; cleanup errors never hide the original
 - pytest: 141 passed (confirmed by the user)
+- npm run build: passes (Next 16.4.0, TypeScript clean, routes /, /chat,
+  /documents, /_not-found all static) — confirmed by the user
 
 ## Commands Used
 - cd backend ; .venv\Scripts\activate.bat ; uvicorn app.main:app --reload
@@ -73,6 +81,9 @@ backend/try_similarity.py (temporary measurement script for 13.2, Part B)
 - python try_pipeline.py ingest data\uploads\sample.txt
 - python try_pipeline.py ask "<question>" [document_id]
 - python try_documents.py add <file> | list | delete <id>
+- python try_similarity.py [document_id]   (edit the EDIT ME questions first)
+- Test files for the website check live in backend\data\uploads (git-ignored):
+  empty.txt, fake.pdf, photo.png, study_notes.txt, notes.pdf (12.9 MB)
 - git status ; git add . ; git commit -m "..." ; git log --oneline
 - Zip for sharing WITHOUT .env: git archive -o learnexa-phase13.zip HEAD
 - Next docs: frontend/node_modules/next/dist/docs/01-app/
@@ -91,22 +102,26 @@ Frontend: NEXT_PUBLIC_API_URL (optional, default http://127.0.0.1:8000)
 ## Known Issues
 - SECURITY: backend/.env was inside earlier project zips sent to Claude. If any
   zip containing it was shared, rotate the Gemini key. Use git archive to zip.
+- After the wrong-key test, the correct key must be restored in backend/.env
+  and the backend restarted (settings are cached).
 - Free tier: 100 embedded texts/min; big PDFs upload slowly (UI shows a timer).
   A busy Gemini can add up to 2 minutes of retry waiting per embedding batch.
 - Gemini 503/429 spikes are Google-side (shown as a red error bubble).
 - Scanned PDFs rejected (no OCR).
 - Footer-only tiny chunks pollute retrieval; retrieval always returns nearest
   chunks even if irrelevant, so only the prompt prevents an off-topic answer.
-  A similarity cutoff has NOT been measured yet (13.2 Part B).
+  Similarity scores are being measured on the website (row 6 vs row 7).
 - print() in embeddings.py for progress; switch to logging later.
 - Repo is local only (not on GitHub yet).
 - documents.json registry is single-user only; upload limit constant in service.
 - Upload request blocks until ingestion finishes (production fix: background
   job + polling).
 - 422 validation errors have list-shaped detail (api.ts handles both shapes).
-- No automated frontend tests (only tsc/lint/build checks).
-- npm tsc / lint / build output has NEVER been shown by the user (ask again).
-- Frontend manual error walkthrough (13.2 Part A) not yet reported.
+- No automated frontend tests (only the build/TypeScript check).
+- npm run lint output has never been shown by the user.
+- Walkthrough results not yet reported (rows: .png, empty, too large, fake PDF,
+  valid txt, related question, off-topic question, deleted-document link, no
+  documents, wrong API key, backend off).
 - Backend must be running or the frontend shows "Cannot reach the backend".
 - Limits duplicated in frontend and backend (10 MB upload, 1000-char question).
 - Chat history is React state only; no conversation memory sent to the backend.
@@ -138,6 +153,8 @@ Frontend: NEXT_PUBLIC_API_URL (optional, default http://127.0.0.1:8000)
   fails, partial chunks are deleted
 - Retry only temporary Gemini errors (429, 503) with growing waits; permanent
   errors (bad key, bad request, 404 model) fail immediately
+- Never choose a similarity cutoff without measuring: compare the score of
+  related and unrelated questions first (website source cards or try_similarity.py)
 - Frontend type is UploadedDocument (not Document: clashes with the DOM type)
 - Next 16 facts: layouts/pages are server components by default; metadata
   exports are server-only (client pages get a tiny server layout.tsx for
@@ -155,10 +172,11 @@ Frontend: NEXT_PUBLIC_API_URL (optional, default http://127.0.0.1:8000)
 - Git repo root is C:\LearnExa
 
 ## Next Exact Step
-Report npx tsc --noEmit, npm run lint, npm run build results, and what each row
-of the manual walkthrough showed (backend off, bad file types, empty, too
-large, fake PDF, success, no documents, wrong API key, backend stopped mid-chat,
-off-topic question, deleted document link). Then 13.2 Part B: write the
-temporary try_similarity.py to measure similarity scores for related versus
-unrelated questions, and decide from the real numbers whether a cutoff helps.
-Then Phase 14 (delete try_*.py first) and Phase 15.
+Run the 11-row website walkthrough (setup: uvicorn + npm run dev; test files in
+backend\data\uploads) and report, per row, "ok" or the exact message seen. For
+the related question and the off-topic question also report the Similarity
+numbers on the source cards and what Gemini answered. Then decide from the
+numbers whether a similarity cutoff helps, fix any gap found, finish Phase 13
+(complete state files + commit), and start Phase 14: delete try_*.py, write
+README.md, docs/architecture.md, docs/rag-explanation.md. Phase 15:
+docs/interview-preparation.md.
