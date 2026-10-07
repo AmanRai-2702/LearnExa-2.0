@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -7,6 +8,9 @@ from app.models.schemas import DocumentResponse
 from app.rag import vector_store
 from app.rag.loader import SUPPORTED_EXTENSIONS
 from app.rag.pipeline import ingest_document
+from app.rag.vector_store import VectorStoreError
+
+logger = logging.getLogger(__name__)
 
 # backend/app/services/document_service.py -> parents[2] is the backend folder.
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
@@ -90,9 +94,19 @@ def add_document(filename: str, content: bytes) -> DocumentResponse:
         "chunks": result.chunks,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
     }
-    records = _read_registry()
-    records.append(record)
-    _write_registry(records)
+    try:
+        records = _read_registry()
+        records.append(record)
+        _write_registry(records)
+    except Exception:
+        # The document is already in Chroma but could not be recorded. Undo
+        # everything, so we never keep chunks that nobody can see or delete.
+        saved_path.unlink(missing_ok=True)
+        try:
+            vector_store.delete_document(document_id)
+        except VectorStoreError:
+            logger.warning("Could not remove chunks of document %s.", document_id)
+        raise
 
     return DocumentResponse(**record)
 

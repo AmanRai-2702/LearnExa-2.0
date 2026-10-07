@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -6,7 +7,14 @@ from app.rag.generator import generate_answer
 from app.rag.loader import load_document
 from app.rag.retriever import retrieve
 from app.rag.splitter import split_pages
-from app.rag.vector_store import SearchResult, add_chunks, delete_document
+from app.rag.vector_store import (
+    SearchResult,
+    VectorStoreError,
+    add_chunks,
+    delete_document,
+)
+
+logger = logging.getLogger(__name__)
 
 # Shown when nothing relevant can be searched (e.g. no document uploaded yet).
 # Gemini is NOT called in this case: no context means nothing to ground an answer in.
@@ -54,7 +62,17 @@ def ingest_document(path: Path, document_id: str, name: str) -> IngestResult:
     # never keep two versions. We do this AFTER embedding succeeded, so a failed
     # embedding (e.g. rate limit) cannot destroy the older copy.
     delete_document(document_id)
-    stored = add_chunks(chunks, vectors)
+    try:
+        stored = add_chunks(chunks, vectors)
+    except VectorStoreError:
+        # A big document is saved in several batches. If a later batch fails,
+        # the earlier ones are already stored. Remove them so no chunks are left
+        # that nobody can see or delete, then report the original error.
+        try:
+            delete_document(document_id)
+        except VectorStoreError:
+            logger.warning("Could not remove partial chunks of document %s.", document_id)
+        raise
 
     return IngestResult(
         document_id=document_id,

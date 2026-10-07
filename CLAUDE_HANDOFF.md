@@ -1,37 +1,36 @@
 # LearnExa Claude Handoff
 
 ## Current Phase
-Phase 12 of 15 — Testing
+Phase 12 of 15 — Testing (finishing); Phase 13 (error handling) is next
 
 ## Last Completed Step
-12.2 — backend/tests/test_chunking.py written (18 tests; expected total 24 passed
-with the 6 health tests), awaiting the user's pytest run
+12.6 — tests/conftest.py, tests/test_api.py written and tests/test_health.py updated
+(client fixture moved to conftest). Expected total: 111 passed. User confirmed 80
+passed before this step.
 
 ## Last Completed File
-backend/tests/test_chunking.py
+backend/tests/test_api.py
 
 ## Current Working Feature
-Full app works end to end. pytest infrastructure is in place (pytest.ini,
-test_health.py committed; test_chunking.py written).
+Full app works end to end. Backend test suite covers health/CORS, chunking, loader,
+document service, vector store, retriever and both API routers.
 
 ## Next File
-backend/tests/test_loader.py
+None for Phase 12 once pytest shows 111 passed. Phase 13 starts with a review.
 
 ## Next Exact Task
-Confirm `pytest -v` shows 24 passed (from backend, venv active) and commit with
-"Add chunking tests". Ask again for the output of npm run tsc/lint/build (never shown).
-Then 12.3: write tests/test_loader.py (complete file) using tmp_path files:
-txt loads as one page with page_number 1, empty/whitespace txt raises
-DocumentLoadError, unsupported extension raises, non-UTF-8 txt raises, corrupted PDF
-raises. Real names: load_document(path), load_txt, load_pdf, PageText(page_number, text),
-DocumentLoadError, SUPPORTED_EXTENSIONS. Never use the real documents or Gemini.
-Then 12.4 document_service validation tests (monkeypatch ingest_document and the
-module's DATA_DIR/UPLOADS_DIR/REGISTRY_FILE to tmp_path), 12.5 retrieval/vector store
-tests with fake embeddings and a temp Chroma dir (monkeypatch vector_store.CHROMA_DIR)
-and retriever with embed_query monkeypatched, 12.6 API tests for /api/documents and
-/api/chat with pipeline/service functions monkeypatched. Move the `client` fixture to
-tests/conftest.py when a second test file needs it. Then Phase 13 (error handling),
-14 (documentation), 15 (interview preparation).
+Confirm `pytest -v` shows 111 passed (from backend, venv active) and commit with
+"Add API tests and share the client fixture". If test_api.py fails, fix from the pasted
+output (possible: empty-file upload returning 422 instead of 400). Ask again for the
+output of npm run tsc/lint/build (never shown). Then Phase 13: go through the master
+prompt's error list one by one (missing Gemini key, invalid key, Gemini API errors,
+invalid file type, empty file, oversized file, PDF extraction failure, embedding
+failure, Chroma failure, empty question, retrieval failure, no relevant context).
+For each: say where it is handled, verify it (manual test or automated test), fix gaps,
+and check the frontend message. Ideas to examine: partial Chroma chunks after failed
+ingestion, "Gemini configured" only meaning a key exists, 422 list-shaped detail.
+Then Phase 14 (README, docs/architecture.md, docs/rag-explanation.md; delete try_*.py
+first) and Phase 15 (docs/interview-preparation.md based on the real implementation).
 
 ## Working Commands
 cd backend ; .venv\Scripts\activate.bat ; uvicorn app.main:app --reload
@@ -58,17 +57,20 @@ python try_documents.py add data\uploads\sample.txt   (seed a test document)
 - Any page using useSearchParams must wrap it in Suspense (verify with npm run build)
 - Do not add dependencies without explaining
 - Tests: never call Gemini, never touch real data/chroma or documents.json
-- Claude's sandbox has no internet: it cannot install packages or run the real
-  splitter/Chroma/Gemini, so tell the user plainly when tests were not run by Claude
+- Claude's sandbox has no internet and cannot install the app's dependencies: it cannot
+  run the real tests, so say plainly when tests were not run by Claude (loader behaviours
+  were verified against real pypdf)
+- Read the real source files from the user's zip before writing code that depends on
+  them (never guess names); never open or print backend/.env
 - The user often replies "move on" without reporting results: gently ask for build/lint
-  output and pytest output
+  output and pytest output, and check the pass count matches the expected number
 
 ## Known Problems
 Footer-only chunks (documented by a test, not fixed); irrelevant retrieval; Gemini
 503/429 spikes; JSON registry single-user; upload blocks until ingestion completes;
 duplicated limits in frontend and backend; no chat memory; no GFM tables in answers;
-build/lint output never shown; chunking tests not yet run by the user; backend/.env
-was included in shared zips.
+no frontend tests; build/lint output never shown; test_api.py not yet run by the user;
+backend/.env was included in shared zips.
 
 ## Do Not Change
 - Folder structure in the master prompt

@@ -5,6 +5,7 @@ from google import genai
 from google.genai import types
 
 from app.core.config import get_settings
+from app.rag.gemini_errors import is_invalid_key_error
 from app.rag.prompts import SYSTEM_INSTRUCTION, build_user_prompt
 from app.rag.vector_store import SearchResult
 
@@ -13,13 +14,18 @@ logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 5
 WAIT_SECONDS = 10  # waits 10s, 20s, 30s, 40s between attempts when Gemini is busy
 
+# Temporary problems worth retrying: 429 = rate limit, 503 = Gemini is busy.
+RETRYABLE_CODES = (429, 503)
+
 
 class GenerationError(Exception):
     """Raised when an answer cannot be generated. The message is safe to show users."""
 
 
-def _friendly_message(code: int | None) -> str:
-    if code in (401, 403):
+def _friendly_message(error: Exception | None) -> str:
+    """Turn a Gemini error into a message that is safe to show users."""
+    code = getattr(error, "code", None)
+    if is_invalid_key_error(error):
         return "Gemini rejected the request. Check that your API key is valid."
     if code == 404:
         return "The configured Gemini model was not found. Check GEMINI_MODEL in backend/.env."
@@ -77,9 +83,9 @@ def generate_answer(question: str, results: list[SearchResult]) -> str:
                 "Gemini generation failed (attempt %s of %s): %s",
                 attempt, MAX_ATTEMPTS, str(exc)[:300],
             )
-            if code in (429, 503) and attempt < MAX_ATTEMPTS:
+            if code in RETRYABLE_CODES and attempt < MAX_ATTEMPTS:
                 time.sleep(WAIT_SECONDS * attempt)
                 continue
-            raise GenerationError(_friendly_message(code)) from exc
+            raise GenerationError(_friendly_message(exc)) from exc
 
     raise GenerationError(_friendly_message(None))  # not normally reached

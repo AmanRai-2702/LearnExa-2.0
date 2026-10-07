@@ -5,6 +5,7 @@ from google import genai
 from google.genai import types
 
 from app.core.config import get_settings
+from app.rag.gemini_errors import is_invalid_key_error
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,10 @@ BATCH_SIZE = 20
 # We stay below that so large documents do not trigger 429 errors.
 MAX_TEXTS_PER_MINUTE = 80
 MAX_ATTEMPTS = 4
-WAIT_SECONDS = 20  # fallback wait if we still hit a 429: 20s, 40s, 60s
+WAIT_SECONDS = 20  # wait before a retry: 20s, 40s, 60s
+
+# Temporary problems worth retrying: 429 = rate limit, 503 = Gemini is busy.
+RETRYABLE_CODES = (429, 503)
 
 
 class EmbeddingError(Exception):
@@ -29,18 +33,25 @@ def _get_client() -> genai.Client:
     return genai.Client(api_key=settings.gemini_api_key)
 
 
-def _friendly_message(code: int | None) -> str:
-    if code in (400, 401, 403):
+def _friendly_message(error: Exception | None) -> str:
+    """Turn a Gemini error into a message that is safe to show users.
+
+    The raw error text is never included: it goes to the log only.
+    """
+    code = getattr(error, "code", None)
+    if is_invalid_key_error(error):
         return "Gemini rejected the request. Check that your API key is valid."
     if code == 429:
         return "Gemini rate limit reached. Please wait a few minutes and try again."
+    if code == 503:
+        return "Gemini is busy right now. Please try again shortly."
     return "Could not create embeddings with Gemini. Please try again."
 
 
 def _embed_batch(
     client: genai.Client, model: str, batch: list[str], task_type: str
 ) -> list[list[float]]:
-    """Embed one batch, retrying if Gemini reports a rate limit (error 429)."""
+    """Embed one batch, retrying temporary errors (429 and 503)."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             response = client.models.embed_content(
@@ -55,10 +66,10 @@ def _embed_batch(
                 "Gemini embedding failed (attempt %s of %s): %s",
                 attempt, MAX_ATTEMPTS, str(exc)[:300],
             )
-            if code == 429 and attempt < MAX_ATTEMPTS:
+            if code in RETRYABLE_CODES and attempt < MAX_ATTEMPTS:
                 time.sleep(WAIT_SECONDS * attempt)
                 continue
-            raise EmbeddingError(_friendly_message(code)) from exc
+            raise EmbeddingError(_friendly_message(exc)) from exc
 
     raise EmbeddingError(_friendly_message(None))  # not normally reached
 
