@@ -10,9 +10,10 @@ __pycache__/
 venv/
 .pytest_cache/
 
-# Local data (user uploads and the vector database)
+# Local data (user uploads, the vector database and the document list)
 backend/data/uploads/*
 backend/data/chroma/*
+backend/data/documents.json*
 !backend/data/uploads/.gitkeep
 !backend/data/chroma/.gitkeep
 
